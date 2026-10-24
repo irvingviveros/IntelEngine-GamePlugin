@@ -1,10 +1,11 @@
-"""Offline guard check against real native outputs; requires clang++.
+"""Offline guard check against real native outputs; requires clang++ or CXX=cl.exe.
 
 Usage: python tests/StoryTypeFilteringCheck.py <native-repo>
 Compiles BuildExcludeList verbatim and translates the Papyrus guard's string
 concatenation/Find expression, without a game VM. Papyrus compilation is separate.
 """
 import pathlib
+import os
 import re
 import subprocess
 import sys
@@ -44,5 +45,9 @@ int main() {
 }
 ''', encoding="utf-8")
     exe = work / "check.exe"
-    subprocess.run(["clang++", "-std=c++20", "-Wall", "-Wextra", "-Werror", str(cpp), "-o", str(exe)], check=True)
+    compiler = os.environ.get("CXX", "clang++")
+    flags = (["/nologo", "/std:c++20", "/EHsc", "/W4", "/WX", "/utf-8", str(cpp), "/Fe" + str(exe)]
+             if pathlib.Path(compiler).stem.lower() == "cl" else
+             ["-std=c++20", "-Wall", "-Wextra", "-Werror", str(cpp), "-o", str(exe)])
+    subprocess.run([compiler] + flags, check=True, cwd=work)
     subprocess.run([str(exe)], check=True)
